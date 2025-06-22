@@ -25,4 +25,10 @@ file.env
 
 venv/
 .venv/
-data/
+
+
+# Ignore everything in data/
+data/*
+
+# But don't ignore README.md inside data/
+!data/README.md

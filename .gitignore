@@ -1,0 +1,22 @@
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+
+# Ignore environment variables
+file.env
+
+# Ignore local Docker stuff
+*.log
+*.pid
+.env
+.dockerignore
+*.env
+# Ignore OS/IDE files
+.DS_Store
+.vscode/
+.idea/
+
+# Ignore anything else you don't want to commit
+
+.ipynb_checkpoints/

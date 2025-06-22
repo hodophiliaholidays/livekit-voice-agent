@@ -25,3 +25,4 @@ file.env
 
 venv/
 .venv/
+data/

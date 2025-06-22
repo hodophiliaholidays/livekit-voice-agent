@@ -20,3 +20,7 @@ file.env
 # Ignore anything else you don't want to commit
 
 .ipynb_checkpoints/
+
+
+
+venv/

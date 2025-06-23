@@ -24,6 +24,7 @@ RUN apt-get update && apt-get install -y git \
     && pip install --upgrade pip \
     && pip install --use-deprecated=legacy-resolver -r requirements.txt
 
+COPY file.env /app/file.env
 
 
 CMD ["python", "main.py"]

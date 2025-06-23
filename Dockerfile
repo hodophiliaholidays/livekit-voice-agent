@@ -19,6 +19,10 @@ WORKDIR /app
 
 # Copy files and install Python dependencies
 COPY . .
-RUN pip install --upgrade pip && pip install -r requirements.txt
+# Install system dependencies including git
+RUN apt-get update && apt-get install -y git \
+    && pip install --upgrade pip \
+    && pip install -r requirements.txt
+
 
 CMD ["python", "main.py"]

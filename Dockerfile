@@ -11,8 +11,8 @@ RUN apt-get update && apt-get install -y \
     libavcodec-dev \
     libavutil-dev \
     libswscale-dev \
-    libavresample-dev \
     && apt-get clean
+
 
 # Set workdir
 WORKDIR /app

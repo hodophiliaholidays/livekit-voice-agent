@@ -36,7 +36,7 @@ import aiohttp
 import jwt
 from aiohttp import web
 
-from livekit import api, rtc
+from livekit import rtc
 from livekit.protocol import agent, models
 
 from . import http_server, ipc, utils

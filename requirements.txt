@@ -5,3 +5,4 @@ python-dotenv
 llama-index
 twilio
 -e ./livekit
+aiofiles

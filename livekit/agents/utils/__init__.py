@@ -8,7 +8,18 @@ from .misc import is_given, shortuuid, time_ms
 from .moving_average import MovingAverage
 from .participant import wait_for_participant
 
-EventEmitter = rtc.EventEmitter
+EventEmitter = None
+
+def _load_event_emitter():
+    global EventEmitter
+    if EventEmitter is None:
+        from livekit import rtc
+        EventEmitter = rtc.EventEmitter
+
+# Then in any function that needs it:
+# _load_event_emitter()  # make sure it's loaded
+# EventEmitter.emit(...)
+
 
 __all__ = [
     "AudioBuffer",

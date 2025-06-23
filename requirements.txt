@@ -7,3 +7,4 @@ twilio
 livekit
 aiofiles
 av
+psutil

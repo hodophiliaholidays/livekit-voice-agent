@@ -8,6 +8,6 @@ livekit
 aiofiles
 av
 psutil
--e livekit_protocol/
+
 
 

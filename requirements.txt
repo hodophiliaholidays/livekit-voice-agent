@@ -8,8 +8,6 @@ livekit
 aiofiles
 av
 psutil
-livekit-protocol @ git+https://github.com/livekit/protocol-python.git
-
 -e livekit_protocol/
 
 

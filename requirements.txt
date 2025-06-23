@@ -5,4 +5,3 @@ python-dotenv
 llama-index
 twilio
 -e ./livekit
-livekit-rtc

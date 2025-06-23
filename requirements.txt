@@ -8,6 +8,19 @@ livekit
 aiofiles
 av
 psutil
+torch==2.2.2
+aiohttp
+click
+PyJWT
+nest_asyncio
+numpy
+requests
+watchfiles
+pydantic
+typing_extensions
+setuptools
+protobuf
+silero-vad
 
 
 

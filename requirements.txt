@@ -4,8 +4,5 @@ openai
 python-dotenv
 llama-index
 twilio
--e ./livekit
-aiofiles
 livekit
-git+https://github.com/livekit/client-sdk-python.git#egg=livekit-rtc
-livekit-rtc
+aiofiles

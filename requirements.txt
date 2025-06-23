@@ -9,11 +9,12 @@ aiofiles
 av
 psutil
 torch==2.2.2
+torchaudio==2.1.2
 aiohttp
 click
 PyJWT
 nest_asyncio
-numpy
+numpy<2
 requests
 watchfiles
 pydantic

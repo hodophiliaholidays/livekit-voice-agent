@@ -52,6 +52,8 @@ TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
 TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER")
 
+PUBLIC_URL = os.getenv("PUBLIC_URL", "http://localhost:8000")  # fallback for local dev
+message_url = f"{PUBLIC_URL}/twiml/intro"
 
 
 for key in ["LIVEKIT_API_KEY", "LIVEKIT_API_SECRET", "LIVEKIT_URL"]:

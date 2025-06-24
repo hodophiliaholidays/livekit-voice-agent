@@ -22,7 +22,7 @@ typing_extensions
 setuptools
 protobuf
 silero-vad
-livekit-server-sdk
+git+https://github.com/livekit/server-sdk-python.git
 
 
 

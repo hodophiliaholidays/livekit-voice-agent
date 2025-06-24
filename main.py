@@ -57,6 +57,35 @@ TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER")
 PUBLIC_URL = os.getenv("PUBLIC_URL", "http://localhost:8000")
 message_url = f"{PUBLIC_URL}/twiml/intro"
 
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
+
+app = FastAPI()
+
+# Serve static folder
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+from livekit import AccessToken
+
+def generate_token(room, identity):
+    token = AccessToken(api_key=os.getenv("LIVEKIT_API_KEY"), 
+                        api_secret=os.getenv("LIVEKIT_API_SECRET"),
+                        identity=identity)
+    token.add_grant({ "roomJoin": True, "room": room, "canPublish": True, "canSubscribe": True })
+    return token.to_jwt()
+
+@app.get("/", response_class=HTMLResponse)
+def serve_index():
+    with open("static/index.html") as f:
+        return f.read().replace("{{LIVEKIT_WS_URL}}", os.getenv("LIVEKIT_URL"))
+
+from fastapi.responses import PlainTextResponse
+
+@app.get("/get-token", response_class=PlainTextResponse)
+def get_token():
+    token = generate_token(room="demo", identity="guest_user")
+    return token
+
 # LiveKit keys
 for key in ["LIVEKIT_API_KEY", "LIVEKIT_API_SECRET", "LIVEKIT_URL"]:
     if val := os.getenv(key):
@@ -213,8 +242,9 @@ async def startup_event():
 async def initialize_everything():
     try:
         logger.info("🧠 Initializing LlamaIndex and LiveKit agent...")
-        session = AgentSession()
+        session = AgentSession(room_name="demo")
         await session.start(agent=TravelAgent())
+        
         logger.info("✅ Travel agent session started.")
         await session.say("Hi! I hope you're doing well. Is this a good time to chat about your travel plans?")
         logger.info("💬 Initial message sent.")

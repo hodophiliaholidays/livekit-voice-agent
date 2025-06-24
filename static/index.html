@@ -1,0 +1,39 @@
+<!-- static/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Talk to Travel Bot</title>
+</head>
+<body>
+  <h2>🎧 Talk to Your Travel Assistant</h2>
+  <button id="join">Start Talking</button>
+
+  <script type="module">
+    import { connect } from "https://cdn.skypack.dev/livekit-client";
+
+    async function start() {
+      const token = await fetch("/get-token").then(res => res.text());
+      const room = await connect("{{LIVEKIT_WS_URL}}", token, {
+        audio: true,
+        video: false
+      });
+
+      await room.localParticipant.setMicrophoneEnabled(true);
+
+      room.on("trackSubscribed", (track) => {
+        if (track.kind === "audio") {
+          const el = track.attach();
+          el.autoplay = true;
+          el.controls = false;
+          document.body.appendChild(el);
+        }
+      });
+
+      console.log("✅ Joined room:", room.name);
+    }
+
+    document.getElementById("join").onclick = start;
+  </script>
+</body>
+</html>

@@ -29,7 +29,8 @@ from llama_index.core import (
     load_index_from_storage,
 )
 
-from livekit import AccessToken
+from livekit_server_sdk import AccessToken
+
 
 # ─── Logging ───
 logging.basicConfig(level=logging.INFO)
@@ -78,7 +79,12 @@ def generate_token(room, identity):
         api_secret=os.environ["LIVEKIT_API_SECRET"],
         identity=identity,
     )
-    token.add_grant(RoomJoinGrant(room=room))  # ✅ Correct usage
+    token.add_grant({
+        "roomJoin": True,
+        "room": room,
+        "canPublish": True,
+        "canSubscribe": True
+    })
     return token.to_jwt()
 
 

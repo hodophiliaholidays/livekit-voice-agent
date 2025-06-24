@@ -22,6 +22,7 @@ typing_extensions
 setuptools
 protobuf
 silero-vad
+livekit-server-sdk>=0.5.6
 
 
 

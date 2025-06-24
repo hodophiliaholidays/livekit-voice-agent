@@ -8,6 +8,10 @@ from twilio.rest import Client
 from fastapi import FastAPI
 from dotenv import load_dotenv
 from fastapi.responses import Response
+from livekit.agents.runner import jupyter
+from livekit.agents.runner.context import JobContext
+from livekit.agents.runner.options import WorkerOptions
+
 
 # Extend import path for livekit modules
 sys.path.insert(0, str(Path(__file__).resolve().parent / "livekit" / "agents"))
@@ -231,3 +235,28 @@ if __name__ == "__main__":
     else:
         import uvicorn
         uvicorn.run("main:app", host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
+
+@app.get("/talk")
+async def talk_to_agent():
+    try:
+        async def entrypoint(ctx: JobContext):
+            await ctx.connect()
+            session = AgentSession()
+            await session.start(agent=TravelAgent(), room=ctx.room)
+
+        async def run_agent():
+            await jupyter.run_app(
+                WorkerOptions(
+                    entrypoint_fnc=entrypoint,
+                    api_key=os.getenv("LIVEKIT_API_KEY"),
+                    api_secret=os.getenv("LIVEKIT_API_SECRET"),
+                    ws_url=os.getenv("LIVEKIT_URL"),
+                ),
+                jupyter_url="https://jupyter-api-livekit.vercel.app/api/join-token",
+            )
+
+        asyncio.create_task(run_agent())
+        return {"status": "🎙️ Voice agent is starting. Open LiveKit room to begin talking."}
+    except Exception as e:
+        logger.exception("❌ Failed to start LiveKit session via /talk: %s", e)
+        return {"error": str(e)}

@@ -29,7 +29,7 @@ from llama_index.core import (
     load_index_from_storage,
 )
 
-from livekit_server_sdk import AccessToken
+from livekit.api import AccessToken, VideoGrants, RoomService, IngressService
 
 
 # ─── Logging ───

@@ -1,5 +1,4 @@
-FROM python:3.10-slim
-
+FROM python:3.11-slim
 
 # Install system dependencies for av (PyAV)
 RUN apt-get update && apt-get install -y \
@@ -23,8 +22,7 @@ COPY . .
 # Install system dependencies including git
 RUN apt-get update && apt-get install -y git \
     && pip install --upgrade pip \
-    && pip install -r requirements.txt
-
+    && pip install --use-deprecated=legacy-resolver -r requirements.txt
 
 
 

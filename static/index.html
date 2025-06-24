@@ -4,6 +4,38 @@
 <head>
   <meta charset="UTF-8" />
   <title>Talk to Travel Bot</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    h2 {
+      color: #0b5ed7;
+    }
+
+    #join {
+      background-color: #0b5ed7;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      font-size: 1.2rem;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 1rem;
+    }
+
+    #join:hover {
+      background-color: #084298;
+    }
+
+    audio {
+      display: block;
+      margin: 1rem auto;
+    }
+  </style>
 </head>
 <body>
   <h2>🎧 Talk to Your Travel Assistant</h2>
@@ -13,7 +45,9 @@
     import { connect } from "https://cdn.skypack.dev/livekit-client";
 
     async function start() {
-      const token = await fetch("/get-token").then(res => res.text());
+      const identity = `guest_${Math.floor(Math.random() * 10000)}`;
+      const token = await fetch(`/get-token?identity=${identity}&room=demo`).then(res => res.text());
+
       const room = await connect("{{LIVEKIT_WS_URL}}", token, {
         audio: true,
         video: false

@@ -25,6 +25,6 @@ RUN apt-get update && apt-get install -y git \
     && pip install --use-deprecated=legacy-resolver -r requirements.txt
 
 
-
+COPY static/ static/
 
 CMD ["python", "main.py"]

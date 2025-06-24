@@ -1,15 +1,17 @@
 import os
-import asyncio
-import logging
 import sys
 import argparse
+import asyncio
+import logging
 from pathlib import Path
-from twilio.rest import Client
-from fastapi import FastAPI
-from dotenv import load_dotenv
-from fastapi.responses import Response
 
-# Extend import path for livekit modules
+from dotenv import load_dotenv
+from fastapi import FastAPI
+from fastapi.responses import Response, HTMLResponse, PlainTextResponse
+from fastapi.staticfiles import StaticFiles
+from twilio.rest import Client
+
+# Extend import path for custom modules
 sys.path.insert(0, str(Path(__file__).resolve().parent / "livekit" / "agents"))
 
 from livekit.agents import Agent
@@ -27,42 +29,67 @@ from llama_index.core import (
     load_index_from_storage,
 )
 
+from livekit import AccessToken
+
 # ─── Logging ───
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ─── Load Env ───
-if Path(".env").exists() or Path("file.env").exists():
-    env_path = Path(__file__).resolve().parent / "file.env"
+env_path = Path(__file__).resolve().parent / "file.env"
+if env_path.exists():
     load_dotenv(dotenv_path=env_path, override=True)
     logger.info("✅ Loaded environment variables from file.env")
 else:
-    logger.info("ℹ️ Skipping .env load — assuming environment variables are set in Railway")
+    logger.warning("⚠️ file.env not found. Make sure environment variables are set.")
 
+# ─── Required Keys ───
 api_key = os.getenv("OPENAI_API_KEY")
 if not api_key:
-    raise RuntimeError("❌ OPENAI_API_KEY is missing. Check file.env or Railway settings")
+    raise RuntimeError("❌ OPENAI_API_KEY is missing")
 
-# API Keys
 os.environ["OPENAI_API_KEY"] = api_key
-os.environ["LLAMA_CLOUD_API_KEY"] = os.getenv("LLAMA_API_KEY", "")
-os.environ["ELEVENLABS_API_KEY"] = os.getenv("ELEVENLABS_API_KEY", "")
-os.environ["DEEPGRAM_API_KEY"] = os.getenv("DEEPGRAM_API_KEY", "")
+for key in ["LLAMA_API_KEY", "ELEVENLABS_API_KEY", "DEEPGRAM_API_KEY"]:
+    val = os.getenv(key)
+    if val:
+        os.environ[key] = val
 
-# Twilio
+# ─── LiveKit keys ───
+for key in ["LIVEKIT_API_KEY", "LIVEKIT_API_SECRET", "LIVEKIT_URL"]:
+    val = os.getenv(key)
+    if val:
+        os.environ[key] = val
+
+# ─── Twilio Info ───
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN")
 TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER")
 
-PUBLIC_URL = os.getenv("PUBLIC_URL", "http://localhost:8000")
-message_url = f"{PUBLIC_URL}/twiml/intro"
+# ─── App Init ───
+app = FastAPI()
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# LiveKit keys
-for key in ["LIVEKIT_API_KEY", "LIVEKIT_API_SECRET", "LIVEKIT_URL"]:
-    if val := os.getenv(key):
-        os.environ[key] = val
+# ─── Token Generator ───
+from livekit import AccessToken, RoomJoinGrant  # Make sure RoomJoinGrant is imported
 
-logger.info("✅ API keys loaded successfully.")
+def generate_token(room, identity):
+    token = AccessToken(
+        api_key=os.environ["LIVEKIT_API_KEY"],
+        api_secret=os.environ["LIVEKIT_API_SECRET"],
+        identity=identity,
+    )
+    token.add_grant(RoomJoinGrant(room=room))  # ✅ Correct usage
+    return token.to_jwt()
+
+
+@app.get("/", response_class=HTMLResponse)
+def serve_index():
+    with open("static/index.html") as f:
+        return f.read().replace("{{LIVEKIT_WS_URL}}", os.getenv("LIVEKIT_URL"))
+
+@app.get("/get-token", response_class=PlainTextResponse)
+def get_token(identity: str = "guest_user", room: str = "demo"):
+    return generate_token(room=room, identity=identity)
 
 # ─── Sample Customer ───
 test_customer = {
@@ -71,25 +98,40 @@ test_customer = {
     "destination": "Meghalaya"
 }
 
+# ─── Twilio Endpoint ───
+@app.get("/twiml/intro")
+def twiml_intro():
+    twiml = f"""
+    <Response>
+        <Say voice="Polly.Raveena-Neural" language="en-IN">
+            Hi {test_customer['name']}! Thanks for showing interest in our Meghalaya group trip.
+            We’ve sent you some exciting package options on WhatsApp. If you'd like to talk to a trip specialist, just press 1.
+        </Say>
+        <Pause length="2"/>
+        <Say>Have a great day!</Say>
+    </Response>
+    """
+    return Response(content=twiml.strip(), media_type="application/xml")
+
 # ─── Knowledge Base ───
 data_dir = Path("data")
 persist_dir = Path("query-engine-storage")
 
 try:
     if not persist_dir.exists():
-        logger.info("📄 No index found. Creating new index from PDFs...")
+        logger.info("📄 No index found. Creating from PDFs...")
         documents = SimpleDirectoryReader(str(data_dir)).load_data()
         index = VectorStoreIndex.from_documents(documents)
         index.storage_context.persist(persist_dir=persist_dir)
     else:
-        logger.info("📁 Loading existing knowledge base...")
+        logger.info("📁 Loading existing index...")
         storage_context = StorageContext.from_defaults(persist_dir=persist_dir)
         index = load_index_from_storage(storage_context)
 except Exception as e:
-    logger.exception("❌ Failed to initialize knowledge base: %s", e)
+    logger.exception("❌ Failed to load knowledge base: %s", e)
     raise
 
-# ─── Tools ───
+# ─── Tool ───
 async def query_kb(query: str) -> str:
     query_engine = index.as_query_engine(use_async=True)
     result = await query_engine.aquery(query)
@@ -149,7 +191,7 @@ If there are no more questions:
 "Thanks for chatting with me! I have noted your preferences and passed them along to our team."
 """
 
-# ─── Travel Agent ───
+# ─── Agent ───
 class TravelAgent(Agent):
     def __init__(self):
         super().__init__(
@@ -161,10 +203,10 @@ class TravelAgent(Agent):
             tools=[query_kb_tool],
         )
 
-# ─── Twilio Call Function ───
-def call_customer_via_twilio(to_number: str, message_url: str = message_url):
+# ─── Call via Twilio ───
+def call_customer_via_twilio(to_number: str, message_url: str):
     if not all([TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER]):
-        logger.error("❌ Missing Twilio credentials. Cannot place call.")
+        logger.error("❌ Missing Twilio credentials.")
         return
 
     client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
@@ -179,55 +221,29 @@ def call_customer_via_twilio(to_number: str, message_url: str = message_url):
     except Exception as e:
         logger.exception(f"❌ Failed to initiate call to {to_number}: {e}")
 
-# ─── FastAPI ───
-app = FastAPI()
-
-@app.get("/twiml/intro")
-def twiml_intro():
-    twiml = f"""
-    <Response>
-        <Say voice=\"Polly.Raveena-Neural\" language=\"en-IN\">
-            Hi {test_customer['name']}! Thanks for showing interest in our Meghalaya group trip.
-            We’ve sent you some exciting package options on WhatsApp. If you'd like to talk to a trip specialist, just press 1.
-        </Say>
-        <Pause length=\"2\"/>
-        <Say>
-            Have a great day!
-        </Say>
-    </Response>
-    """
-    return Response(content=twiml.strip(), media_type="application/xml")
-
-@app.get("/")
-def root():
-    return {"message": "LiveKit Travel Voicebot is running."}
-
+# ─── Startup Logic ───
 @app.on_event("startup")
 async def startup_event():
     if os.getenv("RUN_AGENT", "true").lower() == "true":
-        logger.info("🚀 FastAPI app started. Launching background services...")
         asyncio.create_task(initialize_everything())
-    else:
-        logger.info("✅ FastAPI app started without agent (RUN_AGENT=false).")
 
 async def initialize_everything():
     try:
-        logger.info("🧠 Initializing LlamaIndex and LiveKit agent...")
-        session = AgentSession()
+        logger.info("🧠 Starting Travel Agent session...")
+        session = AgentSession(room_name="demo")
         await session.start(agent=TravelAgent())
-        logger.info("✅ Travel agent session started.")
         await session.say("Hi! I hope you're doing well. Is this a good time to chat about your travel plans?")
-        logger.info("💬 Initial message sent.")
     except Exception as e:
-        logger.exception("❌ Error during agent startup: %s", e)
+        logger.exception("❌ Error during session start: %s", e)
 
+# ─── CLI Entrypoint ───
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--call", help="Phone number to call")
     args = parser.parse_args()
 
     if args.call:
-        call_customer_via_twilio(to_number=args.call, message_url=message_url)
+        call_customer_via_twilio(to_number=args.call, message_url=f"{os.getenv('PUBLIC_URL')}/twiml/intro")
     else:
         import uvicorn
         uvicorn.run("main:app", host="0.0.0.0", port=int(os.getenv("PORT", 8000)))

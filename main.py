@@ -30,6 +30,8 @@ from llama_index.core import (
     load_index_from_storage,
 )
 
+from livekit.agents.voice.room_io.room_io import Room
+
 
 
 
@@ -262,15 +264,29 @@ app = FastAPI(lifespan=lifespan)
 async def initialize_everything():
     try:
         logger.info("🧠 Starting Travel Agent session...")
+
+        # Generate JWT token
+        token = generate_token(room="demo", identity="agent")
+
+        # Create Room connection
+        room = Room(
+            url=os.environ["LIVEKIT_URL"],
+            token=token,
+            identity="agent"
+        )
+
+        # Start agent session
         session = AgentSession()
         await session.start(
             agent=TravelAgent(),
-            room="demo",              # ✅ This is the correct keyword now
-           
+            room=room
         )
+
         await session.say("Hi! I hope you're doing well. Is this a good time to chat about your travel plans?")
+
     except Exception as e:
         logger.exception("❌ Error during session start: %s", e)
+
 
 # ─── CLI Entrypoint ───
 if __name__ == "__main__":

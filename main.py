@@ -258,8 +258,8 @@ async def startup_event():
 async def initialize_everything():
     try:
         logger.info("🧠 Starting Travel Agent session...")
-        session = AgentSession(room_name="demo")
-        await session.start(agent=TravelAgent())
+        session = AgentSession()
+        await session.start(agent=TravelAgent(), room_name="demo")
         await session.say("Hi! I hope you're doing well. Is this a good time to chat about your travel plans?")
     except Exception as e:
         logger.exception("❌ Error during session start: %s", e)

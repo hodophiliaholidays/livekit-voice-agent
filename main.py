@@ -266,7 +266,7 @@ async def initialize_everything():
         await session.start(
             agent=TravelAgent(),
             room="demo",              # ✅ This is the correct keyword now
-            identity="guest_user",    # Optional, but recommended
+           
         )
         await session.say("Hi! I hope you're doing well. Is this a good time to chat about your travel plans?")
     except Exception as e:

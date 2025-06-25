@@ -249,17 +249,25 @@ def call_customer_via_twilio(to_number: str, message_url: str):
     except Exception as e:
         logger.exception(f"❌ Failed to initiate call to {to_number}: {e}")
 
-# ─── Startup Logic ───
-@app.on_event("startup")
-async def startup_event():
-    if os.getenv("RUN_AGENT", "true").lower() == "true":
-        asyncio.create_task(initialize_everything())
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    asyncio.create_task(initialize_everything())
+    yield
+
+app = FastAPI(lifespan=lifespan)
+
 
 async def initialize_everything():
     try:
         logger.info("🧠 Starting Travel Agent session...")
         session = AgentSession()
-        await session.start(agent=TravelAgent(), room_name="demo")
+        await session.start(
+            agent=TravelAgent(),
+            room="demo",              # ✅ This is the correct keyword now
+            identity="guest_user",    # Optional, but recommended
+        )
         await session.say("Hi! I hope you're doing well. Is this a good time to chat about your travel plans?")
     except Exception as e:
         logger.exception("❌ Error during session start: %s", e)

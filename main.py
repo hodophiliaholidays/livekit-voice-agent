@@ -29,7 +29,7 @@ from llama_index.core import (
     load_index_from_storage,
 )
 
-from livekit.api import AccessToken, VideoGrants
+
 
 
 # ─── Logging ───
@@ -114,6 +114,7 @@ def serve_index():
 @app.get("/get-token", response_class=PlainTextResponse)
 def get_token():
     return generate_token(room="demo", identity="guest_user")
+
 
 
 # ─── Sample Customer ───

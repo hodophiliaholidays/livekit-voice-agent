@@ -21,7 +21,8 @@ from livekit.agents.tts.elevenlabs import ElevenLabsTTS
 from livekit.agents.stt.openai import OpenAIWhisperSTT
 from livekit.agents.voice.vad.silero import SileroVAD
 from livekit.agents.llm.openai import FunctionTool
-
+import jwt
+import time
 from llama_index.core import (
     SimpleDirectoryReader,
     StorageContext,
@@ -37,12 +38,14 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # ─── Load Env ───
-env_path = Path(__file__).resolve().parent / "file.env"
-if env_path.exists():
-    load_dotenv(dotenv_path=env_path, override=True)
-    logger.info("✅ Loaded environment variables from file.env")
-else:
-    logger.warning("⚠️ file.env not found. Make sure environment variables are set.")
+# Load file.env only in local development (not in Railway)
+if os.getenv("RAILWAY_ENVIRONMENT_ID") is None:
+    env_path = Path(__file__).resolve().parent / "file.env"
+    if env_path.exists():
+        load_dotenv(dotenv_path=env_path, override=True)
+        logger.info("✅ Loaded environment variables from file.env")
+    else:
+        logger.warning("⚠️ file.env not found. Make sure environment variables are set.")
 
 # ─── Required Keys ───
 api_key = os.getenv("OPENAI_API_KEY")
@@ -71,10 +74,9 @@ app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # ─── Token Generator ───
-from livekit import AccessToken, RoomJoinGrant  # Make sure RoomJoinGrant is imported
 
-import jwt
-import time
+
+
 
 def generate_token(room, identity):
     api_key = os.getenv("LIVEKIT_API_KEY")

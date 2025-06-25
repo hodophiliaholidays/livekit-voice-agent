@@ -73,19 +73,37 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # ─── Token Generator ───
 from livekit import AccessToken, RoomJoinGrant  # Make sure RoomJoinGrant is imported
 
+import jwt
+import time
+
 def generate_token(room, identity):
-    token = AccessToken(
-        api_key=os.environ["LIVEKIT_API_KEY"],
-        api_secret=os.environ["LIVEKIT_API_SECRET"],
-        identity=identity,
-    )
-    token.add_grant({
-        "roomJoin": True,
-        "room": room,
-        "canPublish": True,
-        "canSubscribe": True
-    })
-    return token.to_jwt()
+    api_key = os.getenv("LIVEKIT_API_KEY")
+    api_secret = os.getenv("LIVEKIT_API_SECRET")
+
+    now = int(time.time())
+    exp = now + 60 * 60  # 1 hour expiry
+
+    payload = {
+        "iss": api_key,
+        "sub": identity,
+        "nbf": now,
+        "exp": exp,
+        "video": {
+            "roomJoin": True,
+            "room": room,
+            "canPublish": True,
+            "canSubscribe": True
+        }
+    }
+
+    token = jwt.encode(payload, api_secret, algorithm="HS256")
+
+    # If token is bytes (older pyjwt), decode to string
+    if isinstance(token, bytes):
+        token = token.decode("utf-8")
+
+    return token
+
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -94,8 +112,9 @@ def serve_index():
         return f.read().replace("{{LIVEKIT_WS_URL}}", os.getenv("LIVEKIT_URL"))
 
 @app.get("/get-token", response_class=PlainTextResponse)
-def get_token(identity: str = "guest_user", room: str = "demo"):
-    return generate_token(room=room, identity=identity)
+def get_token():
+    return generate_token(room="demo", identity="guest_user")
+
 
 # ─── Sample Customer ───
 test_customer = {
